@@ -25,6 +25,7 @@ jobs:
       with:
         image: operator-pipelines-images
         tags: latest ${{ github.sha }}
+        arch: ppc64le
         dockerfiles: |
           ./Dockerfile
 
