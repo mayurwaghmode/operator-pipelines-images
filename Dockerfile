@@ -1,5 +1,3 @@
-//Dockerfile for ppc64le Arch
-
 FROM registry.fedoraproject.org/fedora:34
 
 LABEL description="Cli tools for operator certification pipeline"
