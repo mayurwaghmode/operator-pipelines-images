@@ -30,7 +30,7 @@ jobs:
         uses: redhat-actions/buildah-build@main
         with:
           image: ${{ env.IMAGE_NAME }}
-          tags: ${{ env.IMAGE_TAGS }}
+          tags: ${{ env.IMAGE_TAG }}
           archs: amd64, ppc64le
           containerfiles: |
             ./Dockerfile
