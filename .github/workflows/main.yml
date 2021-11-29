@@ -25,48 +25,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y qemu-user-static
             
-      - name: Build image linux/amd64
-        uses: redhat-actions/buildah-build@v2
+      - name: Build Image
+        id: build_image
+        uses: redhat-actions/buildah-build@main
         with:
           image: ${{ env.IMAGE_NAME }}
-          tags: linux-amd64
-          arch: amd64
+          tags: ${{ env.IMAGE_TAGS }}
+          archs: amd64, ppc64le
           containerfiles: |
             ./Dockerfile
-     
-      - name: Build image linux/ppc64le
-        uses: redhat-actions/buildah-build@v2
+      # Push the image manifest to Quay.io (Image Registry)
+      - name: Push To Quay
+        uses: redhat-actions/push-to-registry@v2
+        id: push
         with:
-          image: ${{ env.IMAGE_NAME }}
-          tags: linux-ppc64le
-          arch: ppc64le
-          containerfiles: |
-            ./Dockerfile
-               
-      - name: Check images created
-        run: buildah images | grep '${{ env.IMAGE_NAME }}'
+          image: ${{ steps.build_image.outputs.image }}
+          tags: ${{ steps.build_image.outputs.tags }}
+          registry: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}
+          username: ${{ secrets.QUAY_USER }}
+          password: ${{ secrets.QUAY_PWD }}
 
-      - name: Check image metadata
+      - name: Echo outputs
         run: |
-          set -x
-          buildah inspect ${{ env.IMAGE_NAME }}:linux-amd64 | jq ".OCIv1.architecture"
-          buildah inspect ${{ env.IMAGE_NAME }}:linux-amd64 | jq ".Docker.architecture"
-          buildah inspect ${{ env.IMAGE_NAME }}:linux-ppc64le | jq ".OCIv1.architecture"
-          buildah inspect ${{ env.IMAGE_NAME }}:linux-ppc64le | jq ".Docker.architecture"
-          
-      # Authenticate to container image registry to push the image
-      - name: Podman Login
-        uses: redhat-actions/podman-login@v1
-        with:
-          registry: quay.io
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_PASSWORD }}
-          
-      - name: Create and add to manifest
-        run: |
-          buildah manifest create ${{ env.IMAGE_NAME }}
-          buildah manifest add ${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}:linux-amd64
-          buildah manifest add ${{ env.IMAGE_NAME }} ${{ env.IMAGE_NAME }}:linux-ppc64le
-          
-      - name: Push manifest
-        run: podman manifest push ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}  ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}  --all
+          echo "${{ toJSON(steps.push.outputs) }}"
